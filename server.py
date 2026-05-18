@@ -58,16 +58,6 @@ class ChatServer:
                     print(f"[LOG] {sender} requested their friends list ({len(friends)} friends)")
                     conn.send(json.dumps({"type": "FRIENDS_LIST", "content": friends}).encode())
 
-                elif cmd == "FILE_MSG":
-                    target = p["target"]
-                    print(f"[LOG] File Transfer: {sender} -> {target}")
-                    if target in self.clients: # Direct
-                        self.clients[target].send(json.dumps(p).encode())
-                    elif target in self.groups and sender in self.groups[target]: # Group
-                        for member in self.groups[target]:
-                            if member in self.clients and member != sender:
-                                self.clients[member].send(json.dumps(p).encode())
-
                 elif cmd == "ADD_TO_GROUP":
                     g_name, invitee = target, p.get("content")
                     

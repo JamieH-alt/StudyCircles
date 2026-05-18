@@ -74,15 +74,6 @@ class ChatClient:
                     print(f"\n[Your Groups]: {', '.join(grps) if grps else 'None'}")
                     print(f"{self.username}@Chat: ", end="", flush=True)
 
-                elif p_type == "FILE_MSG":
-                    fname = packet.get("filename")
-                    content = packet.get("content")
-                    sender = packet.get("sender")
-                    
-                    path = self.save_received_file(fname, content)
-                    print(f"\n[FILE RECEIVED] {sender} sent '{fname}'. Saved to: {path}")
-                    print(f"{self.username}@Chat: ", end="", flush=True)
-                
                 print(f"{self.username}@Chat: ", end="", flush=True)
     
             except: break
@@ -151,35 +142,6 @@ class ChatClient:
     def list_groups(self):
         self.client.send(json.dumps({"type": "GET_GROUPS", "sender": self.username}).encode())
 
-    def send_file(self, target, file_path, is_group=False):
-        try:
-            with open(file_path, "rb") as f:
-                file_data = f.read()
-                filename = os.path.basename(file_path)
-            
-            # Encode to Base64 string
-            encoded_data = base64.b64encode(file_data).decode()
-
-            packet = {
-                "type": "FILE_MSG",
-                "sender": self.username,
-                "target": target,
-                "filename": filename,
-                "content": encoded_data,
-                "is_encrypted": not is_group
-            }
-
-            # If it's a DM, encrypt the Base64 string (Note: RSA has size limits!)
-            if not is_group:
-                # For large files in a real app, you'd use AES. 
-                # For this prototype, we'll send it as is or encrypt if small.
-                pass 
-
-            self.client.send(json.dumps(packet).encode())
-            print(f"[System] File '{filename}' sent to {target}.")
-        except Exception as e:
-            print(f"[Error] File send failed: {e}")
-
     def save_received_file(self, filename, b64_content):
         try:
             file_data = base64.b64decode(b64_content)
@@ -230,7 +192,6 @@ if __name__ == "__main__":
             
             parts = inp.split(":", 2)
             cmd = parts[0].lower()
-
             
 
             try:
@@ -254,15 +215,6 @@ if __name__ == "__main__":
                     c.accept_invite(parts[1].upper(), parts[2])
                 elif cmd == "groups":
                     c.list_groups()
-                elif cmd == "f" and len(parts) == 3:
-                    target_user = parts[1]
-                    file_path = parts[2].strip().strip('"') # Remove extra quotes
-                    c.send_file(target_user, file_path, is_group=False)
-                
-                elif cmd == "fg" and len(parts) == 3:
-                    group_name = parts[1]
-                    file_path = parts[2].strip().strip('"')
-                    c.send_file(group_name, file_path, is_group=True)
                 else:
                     print("Invalid format. Use 'u:target:message' or 'g:group:message'")
             except Exception as e:
