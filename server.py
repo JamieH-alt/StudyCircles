@@ -9,6 +9,7 @@ class ChatServer:
         self.user_db = self.load_db("users.json") 
         self.groups = self.load_db("groups.json")
         self.invites = self.load_db("invites.json")
+        self.offline_queue = self.load_db("offline_msgs.json")
         print(f"[LOG] Server started on {host}:{port}")
 
     def load_db(self, filename):
@@ -49,7 +50,14 @@ class ChatServer:
                         self.user_db[sender]["pub_key"] = p.get("pub_key")
                         print(f"[LOG] USER LOGIN: {current_user}")
                         conn.send(json.dumps({"type": "AUTH_SUCCESS"}).encode())
-                    else: 
+                        
+                        # FLUSH OFFLINE QUEUE
+                        if current_user in self.offline_queue and self.offline_queue[current_user]:
+                            pending = self.offline_queue[current_user]
+                            conn.send(json.dumps({"type": "OFFLINE_SYNC", "content": pending}).encode())
+                            del self.offline_queue[current_user]
+                            self.save_db(self.offline_queue, "offline_msgs.json")
+                    else:
                         print(f"[LOG] Login failed for user: {sender}")
                         conn.send(json.dumps({"type": "AUTH_FAIL", "content": "Denied"}).encode())
 
@@ -74,7 +82,7 @@ class ChatServer:
                             
                             print(f"[LOG] {sender} invited friend {invitee} to {g_name}")
                             if invitee in self.clients:
-                                self.clients[invitee].send(json.dumps({"type": "INFO", "content": f"New Group Invite: {g_name}"}).encode())
+                                self.clients[invitee].send(json.dumps({"type": "GROUP_INVITE", "content": f"{g_name}"}).encode())
                         else:
                             print(f"[LOG] {sender} tried to invite to {g_name} but isn't a member/owner")
                     else:
@@ -98,8 +106,8 @@ class ChatServer:
                             # Real-time alert if they are online
                             if target in self.clients:
                                 self.clients[target].send(json.dumps({
-                                    "type": "INFO", 
-                                    "content": f"New Friend Request from: {sender}"
+                                    "type": "FRIEND_REQUEST", 
+                                    "content": f"{sender}"
                                 }).encode())
                         else:
                             print(f"[LOG] {sender} already has a pending request to {target}")
@@ -142,7 +150,11 @@ class ChatServer:
                     if target in self.clients:
                         self.clients[target].send(json.dumps(p).encode())
                     else:
-                        print(f"[LOG] DM failed: {target} is offline")
+                        print(f"[LOG] DM queued: {target} is offline")
+                        if target not in self.offline_queue:
+                            self.offline_queue[target] = []
+                        self.offline_queue[target].append(p)
+                        self.save_db(self.offline_queue, "offline_msgs.json")
 
                 elif cmd == "CREATE_GROUP":
                     self.groups[target] = [sender]
@@ -151,14 +163,20 @@ class ChatServer:
 
                 elif cmd == "GROUP_MSG":
                     g_name = p["target"]
-                    # SECURITY CHECK: Is sender actually in the group?
                     if g_name in self.groups and sender in self.groups[g_name]:
                         print(f"[LOG] Group Msg: {sender} -> '{g_name}'")
                         for member in self.groups[g_name]:
-                            if member in self.clients and member != sender:
+                            if member == sender:
+                                continue
+                            if member in self.clients:
                                 self.clients[member].send(json.dumps(p).encode())
-                    else:
-                        print(f"[LOG] Blocked: {sender} tried to post to {g_name} without being a member")
+                            else:
+                                # Queue for group members who are away
+                                print(f"[LOG] Group Msg queued for offline member: {member}")
+                                if member not in self.offline_queue:
+                                    self.offline_queue[member] = []
+                                self.offline_queue[member].append(p)
+                        self.save_db(self.offline_queue, "offline_msgs.json")
 
                 elif cmd == "GET_PUB_KEY":
                     print(f"[LOG] KEY REQUEST: {sender} wants {target}'s public key")
