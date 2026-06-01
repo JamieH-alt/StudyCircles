@@ -73,14 +73,30 @@ class StudyCirclesApp(ctk.CTk):
                         self._handle_inbound_dm(packet["sender"], decrypted)
 
                     elif p_type == "GROUP_MSG":
+                        payloads = packet.get("content", {})
+                        my_username = self.backend.username
+                        decrypted = "[Decryption Error]"
+                        
+                        # Decrypt our specific portion of the multi-recipient payload immediately
+                        if isinstance(payloads, dict) and my_username in payloads:
+                            try:
+                                decrypted = self.backend.decrypt_msg(payloads[my_username])
+                            except Exception:
+                                decrypted = "[Decryption Failed]"
+                        else:
+                            decrypted = str(payloads)
+
+                        # Log the parsed plain text copy locally
                         self.backend._log_message_locally(
-                            chat_partner=packet.get("target"), 
-                            sender=packet.get("sender"), 
-                            text=packet.get("content"), 
+                            chat_partner=packet.get("target"),
+                            sender=packet.get("sender"),
+                            text=decrypted,
                             is_group=True
                         )
-                        self._handle_inbound_group_msg(packet.get("target"), packet.get("sender"), packet.get("content"))
-
+                        
+                        # Forward the clean, decrypted plain text straight into the live UI layouts
+                        self._handle_inbound_group_msg(packet.get("target"), packet.get("sender"), decrypted)
+                        
                     elif p_type == "OFFLINE_SYNC":
                         # Process everything missed while disconnected
                         for nested_packet in packet.get("content", []):
@@ -90,8 +106,23 @@ class StudyCirclesApp(ctk.CTk):
                                 self.backend._log_message_locally(chat_partner=nested_packet["sender"], sender=nested_packet["sender"], text=decrypted)
                                 self._handle_inbound_dm(nested_packet["sender"], decrypted)
                             elif t == "GROUP_MSG":
-                                self.backend._log_message_locally(chat_partner=nested_packet["target"], sender=nested_packet["sender"], text=nested_packet["content"], is_group=True)
-                                self._handle_inbound_group_msg(nested_packet["target"], nested_packet["sender"], nested_packet["content"])
+                                payloads = nested_packet.get("content", {})
+                                my_username = self.backend.username
+                                decrypted = "[Decryption Error]"
+                                
+                                if isinstance(payloads, dict) and my_username in payloads:
+                                    try:
+                                        decrypted = self.backend.decrypt_msg(payloads[my_username])
+                                    except Exception:
+                                        decrypted = "[Decryption Failed]"
+                                        
+                                self.backend._log_message_locally(
+                                    chat_partner=nested_packet["target"],
+                                    sender=nested_packet["sender"], 
+                                    text=decrypted, 
+                                    is_group=True
+                                )
+                                self._handle_inbound_group_msg(nested_packet["target"], nested_packet["sender"], decrypted)
 
                     elif p_type == "FRIENDS_LIST":
                         friends = packet.get("content", [])
@@ -113,6 +144,29 @@ class StudyCirclesApp(ctk.CTk):
 
                     elif p_type == "INFO":
                         self.trigger_manual_refresh()
+
+                    elif p_type == "GROUP_PUB_KEYS_RES":
+                        self.backend.pending_group_pub_keys = packet.get("content")
+                        self.backend.group_key_event.set(
+)
+                    elif p_type == "GROUP_MSG":
+                        payloads = packet.get("content", {})
+                        my_username = self.backend.username
+                        decrypted = "[Decryption Error]"
+                        
+                        if isinstance(payloads, dict) and my_username in payloads:
+                            try:
+                                decrypted = self.backend.decrypt_msg(payloads[my_username])
+                            except Exception:
+                                decrypted = "[Decryption Failed]"
+                                
+                        self.backend._log_message_locally(
+                            chat_partner=packet.get("target"),
+                            sender=packet.get("sender"),
+                            text=decrypted,
+                            is_group=True
+                        )
+                        self._handle_inbound_group_msg(packet.get("target"), packet.get("sender"), decrypted)
 
                 except Exception as e: 
                     print(f"[UI Monitor Debug] Stream disconnected: {e}")

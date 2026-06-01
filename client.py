@@ -11,6 +11,8 @@ class ChatClient:
         self.auth_event = threading.Event()
         self.auth_success = False
         self.pending_pub_key = None
+        self.pending_group_pub_keys = None
+        self.group_key_event = threading.Event()
         self.key_event = threading.Event()
 
         # Local History File
@@ -110,6 +112,28 @@ class ChatClient:
                     print(f"\n[Your Groups]: {', '.join(grps) if grps else 'None'}")
                     print(f"{self.username}@Chat: ", end="", flush=True)
 
+                elif p_type == "GROUP_PUB_KEYS_RES":
+                    self.pending_group_pub_keys = packet.get("content")
+                    self.group_key_event.set()
+
+                elif p_type == "GROUP_MSG":
+                    sender = packet.get("sender")
+                    group = packet.get("target")
+                    payloads = packet.get("content", {})
+                    
+                    # Decrypt only our specific portion of the multi-recipient payload
+                    decrypted = "[Decryption Error]"
+                    if isinstance(payloads, dict) and self.username in payloads:
+                        try:
+                            decrypted = self.decrypt_msg(payloads[self.username])
+                        except Exception:
+                            decrypted = "[Decryption Failed]"
+                    else:
+                        decrypted = str(payloads)
+                        
+                    self._log_message_locally(chat_partner=group, sender=sender, text=decrypted, is_group=True)
+                    print(f"\n[{group}] {sender}: {decrypted}")
+
                 print(f"{self.username}@Chat: ", end="", flush=True)
     
             except: break
@@ -124,7 +148,10 @@ class ChatClient:
         }
         self.client.send(json.dumps(packet).encode())
         self.auth_event.wait(timeout=5)
-        if self.auth_success: self.username = username
+        if self.auth_success:
+            self.username = username
+            self.history_file = f"{username}_chat_history.json"
+            self.key_file = f"{username}_private_key.pem"
         return self.auth_success
 
     def get_local_history(self, target_name):
@@ -161,41 +188,47 @@ class ChatClient:
     # --- NEW METHODS FOR LOGGING & LOADING HISTORIES ---
 
     def _log_message_locally(self, chat_partner, sender, text, is_group=False):
-        """Helper to encrypt and append messages to a local JSON database."""
+        """Helper to encrypt and append messages to a user-specific local JSON database."""
         try:
+            # Dynamically reference the logged-in user's history file
+            history_path = getattr(self, 'history_file', f"{self.username}_chat_history.json")
+            
             db = {}
-            if os.path.exists(self.history_file):
-                with open(self.history_file, "r") as f:
+            if os.path.exists(history_path):
+                with open(history_path, "r") as f:
                     db = json.load(f)
-
+                    
             if chat_partner not in db:
                 db[chat_partner] = []
-
-            # Group entries aren't E2EE, but DMs are encrypted using our own public key
-            if is_group:
-                final_content = text
-            else:
-                final_content = self.encrypt_msg(self.public_key_pem, text)
-
+                
+            if is_group and isinstance(text, dict):
+                if self.username in text:
+                    text = self.decrypt_msg(text[self.username])
+                else:
+                    text = "[Encrypted Payload]"
+            
+            final_content = self.encrypt_msg(self.public_key_pem, text)
+                
             db[chat_partner].append({
                 "sender": sender,
                 "content": final_content,
                 "timestamp": time.time(),
                 "is_group": is_group
             })
-
-            with open(self.history_file, "w") as f:
+            
+            with open(history_path, "w") as f:
                 json.dump(db, f, indent=4)
         except Exception as e:
             print(f"\n[Local Log Error] Failed to write history: {e}")
 
     def load_chat_history(self, chat_partner):
-        """Call this from your UI layer to retrieve and decrypt historical entries."""
-        if not os.path.exists(self.history_file):
-            return []
+        """Call this from your UI layer to retrieve and decrypt entries for the active user."""
+        history_path = getattr(self, 'history_file', f"{self.username}_chat_history.json")
         
+        if not os.path.exists(history_path):
+            return []
         try:
-            with open(self.history_file, "r") as f:
+            with open(history_path, "r") as f:
                 db = json.load(f)
             
             history = db.get(chat_partner, [])
@@ -203,18 +236,25 @@ class ChatClient:
             
             for msg in history:
                 try:
-                    if msg.get("is_group"):
-                        text = msg["content"]
-                    else:
-                        text = self.decrypt_msg(msg["content"])
+                    raw_content = msg["content"]
                     
+                    if msg.get("is_group") and (isinstance(raw_content, dict) or not isinstance(raw_content, str) or not raw_content.endswith("==")):
+                        if isinstance(raw_content, dict):
+                            if self.username in raw_content:
+                                text = self.decrypt_msg(raw_content[self.username])
+                            else:
+                                text = "[Encrypted for other members]"
+                        else:
+                            text = str(raw_content)
+                    else:
+                        text = self.decrypt_msg(raw_content)
+                        
                     decrypted_history.append({
                         "sender": msg["sender"],
                         "content": text,
                         "timestamp": msg["timestamp"]
                     })
                 except Exception:
-                    # Skips entries encrypted with older/expired session keys
                     continue
             return decrypted_history
         except Exception:
@@ -228,8 +268,28 @@ class ChatClient:
         self.client.send(json.dumps({"type": "CREATE_GROUP", "sender": self.username, "target": group_name}).encode())
 
     def send_group_msg(self, group_name, message):
+        self.group_key_event.clear()
+        # Query all public keys for members of this group
+        self.client.send(json.dumps({"type": "GET_GROUP_PUB_KEYS", "sender": self.username, "target": group_name}).encode())
+        self.group_key_event.wait(timeout=3)
+        
+        if not self.pending_group_pub_keys:
+            print(f"[Error] Could not retrieve keys for group {group_name}")
+            return
+            
+        # Encrypt the message text separately for each group member
+        encrypted_payloads = {}
+        for member, pub_key in self.pending_group_pub_keys.items():
+            if pub_key:
+                try:
+                    encrypted_payloads[member] = self.encrypt_msg(pub_key, message)
+                except Exception:
+                    continue
+                    
+        # Log plain text copy to our local file layout
         self._log_message_locally(chat_partner=group_name, sender=self.username, text=message, is_group=True)
-        packet = {"type": "GROUP_MSG", "sender": self.username, "target": group_name, "content": message}
+        
+        packet = {"type": "GROUP_MSG", "sender": self.username, "target": group_name, "content": encrypted_payloads}
         self.client.send(json.dumps(packet).encode())
 
     def get_friends(self):

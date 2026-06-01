@@ -183,6 +183,14 @@ class ChatServer:
                     key = self.user_db.get(target, {}).get("pub_key")
                     conn.send(json.dumps({"type": "PUB_KEY_RES", "content": key}).encode())
 
+                elif cmd == "GET_GROUP_PUB_KEYS":
+                    g_name = target
+                    if g_name in self.groups and sender in self.groups[g_name]:
+                        # Build a dictionary of {member_username: public_key}
+                        keys = {member: self.user_db.get(member, {}).get("pub_key") for member in self.groups[g_name]}
+                        print(f"[LOG] KEY REQUEST: {sender} requested keys for group '{g_name}'")
+                        conn.send(json.dumps({"type": "GROUP_PUB_KEYS_RES", "target": g_name, "content": keys}).encode())
+
             except Exception as e:
                 print(f"[ERROR] Exception in handle_client for {current_user}: {e}")
                 break
