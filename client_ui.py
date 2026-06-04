@@ -214,7 +214,7 @@ class StudyCirclesApp(ctk.CTk):
         self.password_entry = ctk.CTkEntry(card, placeholder_text="Password", show="*", width=300, height=40)
         self.password_entry.pack(pady=15)
 
-        login_btn = ctk.CTkButton(card, text="Submit Request", font=("Arial", 16, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, width=300, height=45, command=self.handle_login_action)
+        login_btn = ctk.CTkButton(card, text="Submit", font=("Arial", 16, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, width=300, height=45, command=self.handle_login_action)
         login_btn.pack(pady=30)
 
     def create_message_screen(self):
@@ -259,7 +259,7 @@ class StudyCirclesApp(ctk.CTk):
         self.chat_view_frame.grid_rowconfigure(1, weight=1)
         self.chat_view_frame.grid_columnconfigure(0, weight=1)
 
-        self.chat_title_lbl = ctk.CTkLabel(self.chat_view_frame, text="Select a contact to begin streaming messages", font=("Arial", 18, "bold"), text_color=self.dark_green)
+        self.chat_title_lbl = ctk.CTkLabel(self.chat_view_frame, text="Select a contact to begin messaging", font=("Arial", 18, "bold"), text_color=self.dark_green)
         self.chat_title_lbl.grid(row=0, column=0, sticky="w", padx=30, pady=20)
 
         self.chat_box = ctk.CTkTextbox(self.chat_view_frame, font=("Arial", 14), fg_color="white", text_color="#333333", border_width=1, border_color="#E0E0E0")
@@ -270,11 +270,11 @@ class StudyCirclesApp(ctk.CTk):
         input_row.grid(row=2, column=0, sticky="ew", padx=30, pady=(0, 30))
         input_row.grid_columnconfigure(0, weight=1)
 
-        self.msg_entry = ctk.CTkEntry(input_row, placeholder_text="Type your secure encrypted message payload...", height=45)
+        self.msg_entry = ctk.CTkEntry(input_row, placeholder_text="Message Here...", height=45)
         self.msg_entry.grid(row=0, column=0, sticky="ew", padx=(0, 15))
         self.msg_entry.bind("<Return>", lambda event: self.send_message_hook())
 
-        send_btn = ctk.CTkButton(input_row, text="Send Payload", width=140, height=45, font=("Arial", 13, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, command=self.send_message_hook)
+        send_btn = ctk.CTkButton(input_row, text="Send Message", width=140, height=45, font=("Arial", 13, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, command=self.send_message_hook)
         send_btn.grid(row=0, column=1)
 
     def build_invites_view(self):
@@ -291,10 +291,10 @@ class StudyCirclesApp(ctk.CTk):
         lbl_left.pack(side="left")
 
         # FIXED: Removed wrapper bounds clipping layout bugs so button shows up completely
-        btn_refresh = ctk.CTkButton(left_title_frame, text="🔄 Refresh Data", width=110, height=28, font=("Arial", 11, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, command=self.trigger_manual_refresh)
+        btn_refresh = ctk.CTkButton(left_title_frame, text="🔄 Refresh", width=110, height=28, font=("Arial", 11, "bold"), fg_color=self.accent_green, hover_color=self.hover_green, text_color=self.dark_green, command=self.trigger_manual_refresh)
         btn_refresh.pack(side="right", padx=(20, 0))
 
-        lbl_right = ctk.CTkLabel(self.invites_view_frame, text="Dispatch Outbound Invitations", font=("Arial", 18, "bold"), text_color=self.dark_green)
+        lbl_right = ctk.CTkLabel(self.invites_view_frame, text="Send Invitations", font=("Arial", 18, "bold"), text_color=self.dark_green)
         lbl_right.grid(row=0, column=1, sticky="w", padx=30, pady=20)
 
         self.scroll_invites = ctk.CTkScrollableFrame(self.invites_view_frame, fg_color="white", border_width=1, border_color="#E0E0E0")
@@ -306,7 +306,7 @@ class StudyCirclesApp(ctk.CTk):
         self.form_container = ctk.CTkFrame(send_panel, fg_color="transparent")
         self.form_container.pack(fill="both", expand=True, padx=40, pady=40)
 
-        self.lbl_type = ctk.CTkLabel(self.form_container, text="Transaction Request Type:", font=("Arial", 13, "bold"), text_color=self.dark_green)
+        self.lbl_type = ctk.CTkLabel(self.form_container, text="Invitation Type:", font=("Arial", 13, "bold"), text_color=self.dark_green)
         self.lbl_type.pack(anchor="w", pady=(0, 5))
 
         self.invite_type_var = ctk.StringVar(value="Friend Request")
@@ -318,7 +318,7 @@ class StudyCirclesApp(ctk.CTk):
         )
         dropdown.pack(fill="x", pady=(0, 20))
 
-        self.lbl_target = ctk.CTkLabel(self.form_container, text="Target Recipient Username:", font=("Arial", 13, "bold"), text_color=self.dark_green)
+        self.lbl_target = ctk.CTkLabel(self.form_container, text="Target Username:", font=("Arial", 13, "bold"), text_color=self.dark_green)
         self.lbl_target.pack(anchor="w", pady=(0, 5))
         
         self.invite_target_entry = ctk.CTkEntry(self.form_container, placeholder_text="Type friend username here...", height=40)
@@ -326,7 +326,7 @@ class StudyCirclesApp(ctk.CTk):
 
         self.group_field_frame = ctk.CTkFrame(self.form_container, fg_color="transparent")
         
-        lbl_group_select = ctk.CTkLabel(self.group_field_frame, text="Target Group Name Context:", font=("Arial", 13, "bold"), text_color=self.dark_green)
+        lbl_group_select = ctk.CTkLabel(self.group_field_frame, text="Target Group Name:", font=("Arial", 13, "bold"), text_color=self.dark_green)
         lbl_group_select.pack(anchor="w", pady=(0, 5))
         
         self.invite_group_entry = ctk.CTkEntry(self.group_field_frame, placeholder_text="Type existing group name here...", height=40)
@@ -514,7 +514,7 @@ class StudyCirclesApp(ctk.CTk):
         self.highlight_sidebar_selection(target_name, target_type)
         self.show_chat_view()
         
-        prefix_title = "Direct Secure E2EE Conversation with" if target_type == "user" else "Public Shared Room Group Workspace"
+        prefix_title = "Messages with " if target_type == "user" else "Public Shared Group Workspace"
         self.chat_title_lbl.configure(text=f"{prefix_title}: {target_name}")
         
         self.chat_box.configure(state="normal")
@@ -554,7 +554,7 @@ class StudyCirclesApp(ctk.CTk):
                     self.backend.send_group_msg(self.current_target, message)
                 self.after(1, lambda: self._render_msg_line(self.backend.username, message))
             except Exception as e:
-                self.after(1, lambda: messagebox.showerror("Network Error", f"Failed to send message payload:\n{e}"))
+                self.after(1, lambda: messagebox.showerror("Network Error", f"Failed to send message:\n{e}"))
 
         threading.Thread(target=async_outbound_dispatch, daemon=True).start()
         self.msg_entry.delete(0, ctk.END)
@@ -587,7 +587,7 @@ class StudyCirclesApp(ctk.CTk):
             try:
                 if invite_type == "Friend Request":
                     self.backend.add_friend(target_friend)
-                    self.after(1, lambda: messagebox.showinfo("Dispatched", f"Sent friend invite payload out to {target_friend}"))
+                    self.after(1, lambda: messagebox.showinfo("Dispatched", f"Sent friend invite to {target_friend}"))
                 else:
                     if not target_group:
                         self.after(1, lambda: messagebox.showwarning("Validation Error", "Target Group field cannot stand empty."))
