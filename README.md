@@ -65,17 +65,17 @@ GitHub Link:
 
 [4.3 Screenshots of Interface](#4.3-screenshots-of-interface)
 
-[Login / Register](#4.3.1-login-/-register)
+[4.3.1 Login / Register](#4.3.1-login-/-register)
 
-[Friend Request](#4.3.2-friend-request)
+[4.3.2 Friend Request](#4.3.2-friend-request)
 
-[Accept Friend Request/Group Invite](#4.3.3-accept-friend-request/group-invite)
+[4.3.3 Accept Friend Request/Group Invite](#4.3.3-accept-friend-request/group-invite)
 
-[Group Invite](#4.3.4-group-invite)
+[4.3.4 Group Invite](#4.3.4-group-invite)
 
-[Send Group/Friend Message](#4.3.5-send-group/friend-message)
+[4.3.5 Send Group/Friend Message](#4.3.5-send-group/friend-message)
 
-[Disconnect](#4.3.6-disconnect)
+[4.3.6 Disconnect](#4.3.6-disconnect)
 
 [4.4 Version Control Summary (Optional)](#4.4-version-control-summary-\(optional\))
 
@@ -85,9 +85,9 @@ GitHub Link:
 
 [5.2 Test Cases and Results](#5.2-test-cases-and-results)
 
-[Test Cases](#5.2.1-test-cases)
+[5.2.1 Test Cases](#5.2.1-test-cases)
 
-[Key:](#5.2.2-key)
+[5.2.2 Key](#5.2.2-key)
 
 [5.3 Evaluation Against Requirements](#5.3-evaluation-against-requirements)
 
@@ -101,7 +101,6 @@ GitHub Link:
 
 [6.3 Personal Reflection](#6.3-personal-reflection)
 
-a  
 ---
 
 1. ##  **Identifying and Defining** {#identifying-and-defining}
